@@ -85,7 +85,7 @@
       const remove = document.createElement('button'); remove.type = 'button'; remove.textContent = '×'; remove.setAttribute('aria-label', 'Удалить дело: ' + task.title); remove.title = 'Удалить дело';
       checkbox.addEventListener('change', () => {
         task.done = checkbox.checked; row.classList.toggle('done', task.done); priority.hidden = task.done; saveTasks(); updateBoard();
-        if (task.done) { cheer('Ещё одно дело? Решено.'); if (tasks.every(item => item.done)) { burst(); toast('Всё готово. Вот это ты разрулил!'); } }
+        if (task.done) { cheer('Ещё одно дело? Решено.'); if (tasks.every(item => item.done)) { burst(select('.task-board')); toast('Всё готово. Вот это ты разрулил!'); } }
       });
       priority.addEventListener('click', () => { tasks = [task, ...tasks.filter(item => item.id !== task.id)]; saveTasks(); renderTasks(); toast('Первое дело выбрано. Теперь только оно.'); select('#taskList input')?.focus(); });
       remove.addEventListener('click', () => { const index = tasks.findIndex(item => item.id === task.id); tasks = tasks.filter(item => item.id !== task.id); saveTasks(); renderTasks(); const buttons = all('#taskList .task-check input'); (buttons[Math.min(index, buttons.length - 1)] || select('#boardTask')).focus(); });
