@@ -70,11 +70,44 @@
     const saved = JSON.parse(localStorage.getItem(storageKey) || '[]');
     if (Array.isArray(saved)) tasks = saved.filter(item => item && typeof item.id === 'string' && typeof item.title === 'string').slice(0, 30).map(item => ({id:item.id, title:item.title.slice(0,100), done:Boolean(item.done)}));
   } catch {}
+  const freeTaskLimit = 3;
+  const accessKey = 'omni-task-access-v1';
+  const createdKey = 'omni-created-tasks-v1';
+  let tasksUnlocked = false;
+  let tasksCreated = tasks.length;
+  try {
+    tasksUnlocked = localStorage.getItem(accessKey) === 'telegram-opened';
+    const count = Number(localStorage.getItem(createdKey));
+    if (Number.isSafeInteger(count) && count >= 0) tasksCreated = Math.max(tasksCreated, count);
+  } catch {}
+  const unlockDialog = select('#taskUnlockDialog');
+  function openTaskUnlock() {
+    if (tasksUnlocked || unlockDialog.open) return;
+    unlockDialog.showModal();
+  }
+  function closeTaskUnlock() { if (unlockDialog.open) unlockDialog.close(); }
+  select('#closeTaskUnlock').addEventListener('click', closeTaskUnlock);
+  select('#laterTaskUnlock').addEventListener('click', closeTaskUnlock);
+  unlockDialog.addEventListener('click', event => {
+    if (event.target !== unlockDialog) return;
+    const rect = unlockDialog.getBoundingClientRect();
+    if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) closeTaskUnlock();
+  });
+  select('#unlockTaskLink').addEventListener('click', () => {
+    // This is a browser-local unlock on visiting Telegram, not bot-side verification.
+    tasksUnlocked = true;
+    try { localStorage.setItem(accessKey, 'telegram-opened'); } catch {}
+    closeTaskUnlock(); updateBoard();
+    toast('Расширенная доска открыта в этом браузере. Можно добавить до 30 дел.');
+  });
   function saveTasks() { try { localStorage.setItem(storageKey, JSON.stringify(tasks)); } catch { toast('Дела работают, но браузер не разрешил сохранение.'); } }
   function renderTasks() {
-    const list = select('#taskList'); list.replaceChildren();
+    const list = select('#taskList');
+    const oldPositions = new Map([...list.children].map(row => [row.dataset.taskId, row.getBoundingClientRect()]));
+    const oldIds = new Set(oldPositions.keys());
+    list.replaceChildren();
     tasks.forEach(task => {
-      const row = document.createElement('li'); row.className = 'task-row' + (task.done ? ' done' : '');
+      const row = document.createElement('li'); row.dataset.taskId = task.id; row.className = 'task-row' + (task.done ? ' done' : '');
       const label = document.createElement('label'); label.className = 'task-check';
       const checkbox = document.createElement('input'); checkbox.type = 'checkbox'; checkbox.checked = task.done;
       checkbox.setAttribute('aria-label', 'Готово: ' + task.title);
@@ -89,7 +122,17 @@
       });
       priority.addEventListener('click', () => { tasks = [task, ...tasks.filter(item => item.id !== task.id)]; saveTasks(); renderTasks(); toast('Первое дело выбрано. Теперь только оно.'); select('#taskList input')?.focus(); });
       remove.addEventListener('click', () => { const index = tasks.findIndex(item => item.id === task.id); tasks = tasks.filter(item => item.id !== task.id); saveTasks(); renderTasks(); const buttons = all('#taskList .task-check input'); (buttons[Math.min(index, buttons.length - 1)] || select('#boardTask')).focus(); });
+      if (!oldIds.has(task.id)) row.classList.add('task-enter');
       row.append(label, priority, remove); list.append(row);
+    });
+    if (!reduced) requestAnimationFrame(() => {
+      for (const row of list.children) {
+        const previous = oldPositions.get(row.dataset.taskId);
+        if (!previous || !row.animate) continue;
+        const next = row.getBoundingClientRect();
+        const delta = previous.top - next.top;
+        if (Math.abs(delta) > 1) row.animate([{transform:`translateY(${delta}px)`},{transform:'translateY(0)'}], {duration:320,easing:'cubic-bezier(.2,.8,.2,1)'});
+      }
     });
     updateBoard();
   }
@@ -102,12 +145,18 @@
     select('.board-progress').setAttribute('aria-valuenow', String(percent));
     select('#boardEmpty').hidden = tasks.length > 0;
     select('#clearDone').disabled = done === 0;
+    select('#taskAccessStatus').textContent = tasksUnlocked ? 'Расширенная доска · до 30 задач' : `Бесплатные задачи: ${Math.min(tasksCreated, freeTaskLimit)} / ${freeTaskLimit}`;
   }
   function addTask(title) {
     title = title.trim().slice(0,100); if (!title) return false;
+    if (!tasksUnlocked && tasksCreated >= freeTaskLimit) { openTaskUnlock(); return false; }
     if (tasks.length >= 30) { toast('На доске уже 30 дел. Освободи место для нового.'); return false; }
     tasks.push({id:crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random(), title, done:false});
-    saveTasks(); renderTasks(); return true;
+    tasksCreated++;
+    try { localStorage.setItem(createdKey, String(tasksCreated)); } catch {}
+    saveTasks(); renderTasks();
+    if (!tasksUnlocked && tasksCreated >= freeTaskLimit) openTaskUnlock();
+    return true;
   }
   select('#taskBoardForm').addEventListener('submit', event => { event.preventDefault(); if (addTask(select('#boardTask').value)) { select('#boardTask').value = ''; cheer('Выгрузил из головы — уже полдела.'); } });
   select('#clearDone').addEventListener('click', () => { tasks = tasks.filter(task => !task.done); saveTasks(); renderTasks(); toast('Готовое убрали. Место для нового.'); });
@@ -131,8 +180,8 @@
   select('#shuffleImpulse').addEventListener('click', () => {
     const button = select('#shuffleImpulse'); if (button.disabled) return;
     button.disabled = true; select('.impulse-display').classList.add('shuffling');
-    shuffleTimeout = setTimeout(() => { impulseIndex = (impulseIndex + 1 + Math.floor(Math.random() * (impulses.length - 1))) % impulses.length; showImpulse(); ping(); }, reduced ? 0 : 180);
-    setTimeout(() => { select('.impulse-display').classList.remove('shuffling'); button.disabled = false; }, reduced ? 20 : 520);
+    shuffleTimeout = setTimeout(() => { impulseIndex = (impulseIndex + 1 + Math.floor(Math.random() * (impulses.length - 1))) % impulses.length; showImpulse(); ping(); }, reduced ? 0 : 210);
+    setTimeout(() => { select('.impulse-display').classList.remove('shuffling'); button.disabled = false; }, reduced ? 20 : 620);
   });
   select('#takeImpulse').addEventListener('click', () => {
     const title = impulses[impulseIndex][3];
