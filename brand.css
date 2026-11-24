@@ -21,3 +21,6 @@ footer{flex-wrap:wrap;row-gap:20px}footer .footer-legal{display:flex;flex:0 0 10
 
 /* Footer documents are normal flow content, independent of all header nav styles. */
 .legal-bottom{position:static;inset:auto;display:block;clear:both}.legal-bottom .footer-legal{position:static!important;inset:auto!important;display:flex;flex-direction:row;justify-content:center;align-items:center;width:auto;max-width:1200px;margin:0 auto;padding:0;border:0;box-shadow:none;background:transparent;gap:12px 28px}.legal-bottom .footer-legal a{position:static;display:inline-block;margin:0;padding:0;min-height:0;font-size:10px;line-height:1.8;color:#929292;white-space:normal}.legal-bottom .footer-legal a:after{display:none}@media(max-width:760px){.legal-bottom .footer-legal{flex-direction:column;gap:10px}.legal-bottom .footer-legal a{font-size:11px}}
+
+/* No sound control or audio output: reclaim the header space. */
+header{grid-template-columns:auto minmax(0,1fr) auto}@media(max-width:760px){header{grid-template-columns:minmax(0,1fr) auto}header .profile-trigger{grid-column:2;grid-row:1}}
