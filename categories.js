@@ -12,7 +12,7 @@
       if(active)link.setAttribute('aria-current','page');else link.removeAttribute('aria-current');
     });
     if(scroll) {
-      if(!changed && hash === 'subscription') document.getElementById(hash).scrollIntoView({behavior:'smooth'});
+      if(!changed && hash === 'subscription') document.getElementById(hash).scrollIntoView({behavior:document.documentElement.classList.contains('motion-off')||matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});
       else window.scrollTo({top:0,behavior:'instant'});
     }
     document.title = 'Omnibot — '+({home:'сложное станет проще',tasks:'твои задачи',focus:'время для фокуса',chat:'демо-чат',support:'техподдержка',about:'о помощнике'}[next]);
