@@ -32,6 +32,16 @@
     activeUser = user;
     window.dispatchEvent(new CustomEvent('omni-profile-change'));
     avatar(find('headerAvatar'), user); avatar(find('profileAvatar'), user);
+    avatar(find('cardProfileAvatar'), user);
+    find('cardProfileName').textContent = user ? user.name : 'Твой профиль';
+    find('cardProfileDescription').textContent = user ? 'Профиль подключён через Telegram.' : 'Войди через Telegram — здесь появятся твоё имя и фото.';
+    find('cardProfileUsername').textContent = user?.preferred_username ? '@'+user.preferred_username : '—';
+    find('cardProfileId').textContent = user ? String(user.id) : '—';
+    find('cardProfileState').textContent = user ? 'Telegram подключён' : 'Не выполнен вход';
+    find('cardProfileState').dataset.connected = String(!!user);
+    find('cardOpenProfile').textContent = user ? 'Открыть профиль ↗' : 'Войти через Telegram ↗';
+    find('profileTelegramId').textContent = user ? 'Telegram ID: '+user.id : '';
+
     find('headerProfileName').textContent = user ? user.name : 'Твой профиль';
     find('headerProfileStatus').textContent = user ? 'Telegram подключён' : 'Войти через Telegram';
     find('profileTrigger').setAttribute('aria-label', user ? `Открыть профиль: ${user.name}` : 'Открыть личный профиль');
@@ -70,6 +80,11 @@
   find('profileTrigger').addEventListener('click', () => {
     if (!dialog.open) dialog.showModal();
 
+  });
+  find('navOpenProfile').addEventListener('click', () => { if (!dialog.open) dialog.showModal(); });
+  find('cardOpenProfile').addEventListener('click', () => {
+    if (!dialog.open) dialog.showModal();
+    if (!activeUser) login.click();
   });
   find('closeProfile').addEventListener('click', () => dialog.close());
   dialog.addEventListener('click', event => {
