@@ -2,20 +2,10 @@
   const select = s => document.querySelector(s);
   const all = s => [...document.querySelectorAll(s)];
   const motionQuery = matchMedia('(prefers-reduced-motion: reduce)');
-  let manualMotion = false;
-  try { manualMotion = localStorage.getItem('reshala-motion') !== null; } catch {}
-  function applyMotion(off, save = false) {
-    reduced = off;
-    document.documentElement.classList.toggle('motion-off', off);
-    const button = select('#motionToggle');
-    button.setAttribute('aria-pressed', String(off));
-    button.setAttribute('aria-label', off ? 'Включить анимации' : 'Уменьшить анимации');
-    button.title = off ? 'Включить анимации' : 'Уменьшить анимации';
-    if (save) { manualMotion = true; try { localStorage.setItem('reshala-motion', off ? 'off' : 'on'); } catch {} }
-  }
-  applyMotion(reduced);
-  select('#motionToggle').addEventListener('click', () => { applyMotion(!reduced, true); toast(reduced ? 'Спокойный режим. Всё работает, движения меньше.' : 'Анимации включены. Поехали!'); });
-  motionQuery.addEventListener('change', event => { if (!manualMotion) applyMotion(event.matches); });
+  // The site has one animated mode. Respect the device accessibility preference.
+  try { localStorage.removeItem('reshala-motion'); } catch {}
+  document.documentElement.classList.remove('motion-off');
+  motionQuery.addEventListener('change', event => { reduced = event.matches; });
 
   // Closed navigation is hidden from the tab order too.
   const menuButton = select('.menu-toggle');
