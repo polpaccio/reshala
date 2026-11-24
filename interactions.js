@@ -74,6 +74,7 @@
   const accessKey = 'omni-task-access-v1';
   const createdKey = 'omni-created-tasks-v1';
   let tasksUnlocked = false;
+  let plusActive = false;
   let tasksCreated = tasks.length;
   try {
     tasksUnlocked = localStorage.getItem(accessKey) === 'telegram-opened';
@@ -82,7 +83,7 @@
   } catch {}
   const unlockDialog = select('#taskUnlockDialog');
   function openTaskUnlock() {
-    if (tasksUnlocked || unlockDialog.open) return;
+    if (tasksUnlocked || plusActive || unlockDialog.open) return;
     unlockDialog.showModal();
   }
   function closeTaskUnlock() { if (unlockDialog.open) unlockDialog.close(); }
@@ -145,22 +146,23 @@
     select('.board-progress').setAttribute('aria-valuenow', String(percent));
     select('#boardEmpty').hidden = tasks.length > 0;
     select('#clearDone').disabled = done === 0;
-    select('#taskAccessStatus').textContent = tasksUnlocked ? 'Расширенная доска · до 30 задач' : `Бесплатные задачи: ${Math.min(tasksCreated, freeTaskLimit)} / ${freeTaskLimit}`;
+    select('#taskAccessStatus').textContent = plusActive ? 'Омни Плюс · расширенная доска до 30 задач' : tasksUnlocked ? 'Расширенная доска · до 30 задач' : `Бесплатные задачи: ${Math.min(tasksCreated, freeTaskLimit)} / ${freeTaskLimit}`;
   }
   function addTask(title) {
     title = title.trim().slice(0,100); if (!title) return false;
-    if (!tasksUnlocked && tasksCreated >= freeTaskLimit) { openTaskUnlock(); return false; }
+    if (!tasksUnlocked && !plusActive && tasksCreated >= freeTaskLimit) { openTaskUnlock(); return false; }
     if (tasks.length >= 30) { toast('На доске уже 30 дел. Освободи место для нового.'); return false; }
     tasks.push({id:crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random(), title, done:false});
     tasksCreated++;
     try { localStorage.setItem(createdKey, String(tasksCreated)); } catch {}
     saveTasks(); renderTasks();
-    if (!tasksUnlocked && tasksCreated >= freeTaskLimit) openTaskUnlock();
+    if (!tasksUnlocked && !plusActive && tasksCreated >= freeTaskLimit) openTaskUnlock();
     return true;
   }
   select('#taskBoardForm').addEventListener('submit', event => { event.preventDefault(); if (addTask(select('#boardTask').value)) { select('#boardTask').value = ''; cheer('Выгрузил из головы — уже полдела.'); } });
   select('#clearDone').addEventListener('click', () => { tasks = tasks.filter(task => !task.done); saveTasks(); renderTasks(); toast('Готовое убрали. Место для нового.'); });
   renderTasks();
+  window.addEventListener('omni-subscription-change', event => { plusActive = event.detail?.active === true; if (plusActive) closeTaskUnlock(); updateBoard(); });
 
   const impulses = [
     ['↗','Правило двух минут','Найди дело, которое можно закончить за две минуты. И сделай его прямо сейчас.','Закончить одно дело за две минуты'],

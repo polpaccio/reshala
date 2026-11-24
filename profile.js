@@ -4,6 +4,7 @@
   const dialog = find('profileDialog');
   const login = find('telegramLogin');
   const status = find('profileLoginStatus');
+  const authKey = 'omni-telegram-auth-v1';
   const sessionKey = 'omni-telegram-profile-v1';
   let config, activeUser, expiryTimer, pendingCleanup, attempt = 0;
   const defaultAvatar = find('headerAvatar').innerHTML;
@@ -29,6 +30,7 @@
   }
   function render(user) {
     activeUser = user;
+    window.dispatchEvent(new CustomEvent('omni-profile-change'));
     avatar(find('headerAvatar'), user); avatar(find('profileAvatar'), user);
     find('headerProfileName').textContent = user ? user.name : 'Твой профиль';
     find('headerProfileStatus').textContent = user ? 'Telegram подключён' : 'Войти через Telegram';
@@ -46,7 +48,7 @@
   }
   function forget() {
     attempt++; clearTimeout(expiryTimer); if (pendingCleanup) pendingCleanup();
-    try { sessionStorage.removeItem(sessionKey); } catch {}
+    try { sessionStorage.removeItem(sessionKey); sessionStorage.removeItem(authKey); } catch {}
     status.textContent = ''; login.disabled = false; render(null);
   }
   // Public display session only. Private APIs must validate Telegram's hash server-side.
@@ -104,7 +106,9 @@
         if (data?.event !== 'auth_result') return;
         if (!data.result) { status.textContent = 'Вход отменён. Можно попробовать ещё раз.'; cleanup(); return; }
         const user = normalize(data.result);
-        cleanup(); save(user);
+        cleanup();
+        try { sessionStorage.setItem(authKey, JSON.stringify(data.result)); } catch {}
+        save(user);
         popup.close();
       } catch { cleanup(); status.textContent = 'Не удалось получить профиль. Попробуй войти ещё раз.'; }
     };
