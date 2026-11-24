@@ -212,5 +212,5 @@
   reset.onclick = event => { oldReset(event); select('.timer-panel').classList.remove('focus-running'); };
   all('[data-minutes]').forEach(button => button.addEventListener('click', () => select('.timer-panel').classList.remove('focus-running')));
   new MutationObserver(() => { if (!ticking) select('.timer-panel').classList.remove('focus-running'); }).observe(select('#timerLabel'), {childList:true,characterData:true,subtree:true});
-  all('[data-scenario],[data-minutes]').forEach(button => button.setAttribute('aria-pressed',String(button.classList.contains('selected'))));
+  all('[data-minutes]').forEach(button => button.setAttribute('aria-pressed',String(button.classList.contains('selected'))));
 })();
